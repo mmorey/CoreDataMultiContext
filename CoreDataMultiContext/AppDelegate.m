@@ -13,6 +13,7 @@
 @implementation AppDelegate
 
 @synthesize managedObjectContext = _managedObjectContext;
+@synthesize writerManagedObjectContext = _writerManagedObjectContext;
 @synthesize managedObjectModel = _managedObjectModel;
 @synthesize persistentStoreCoordinator = _persistentStoreCoordinator;
 
@@ -71,18 +72,29 @@
 
 // Returns the managed object context for the application.
 // If the context doesn't already exist, it is created and bound to the persistent store coordinator for the application.
-- (NSManagedObjectContext *)managedObjectContext
-{
+- (NSManagedObjectContext *)managedObjectContext{
     if (_managedObjectContext != nil) {
         return _managedObjectContext;
     }
     
+    _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+    _managedObjectContext.parentContext = [self writerManagedObjectContext];
+    
+    return _managedObjectContext;
+}
+
+// Parent context
+- (NSManagedObjectContext *)writerManagedObjectContext{
+    if (_writerManagedObjectContext != nil) {
+        return _writerManagedObjectContext;
+    }
+    
     NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
     if (coordinator != nil) {
-        _managedObjectContext = [[NSManagedObjectContext alloc] init];
-        [_managedObjectContext setPersistentStoreCoordinator:coordinator];
+        _writerManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+        [_writerManagedObjectContext setPersistentStoreCoordinator:coordinator];
     }
-    return _managedObjectContext;
+    return _writerManagedObjectContext;
 }
 
 // Returns the managed object model for the application.

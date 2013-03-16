@@ -9,6 +9,7 @@
 #import "MasterViewController.h"
 
 #import "DetailViewController.h"
+#import "AppDelegate.h"
 
 @interface MasterViewController ()
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
@@ -53,29 +54,60 @@
     NSDictionary *contacts = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableContainers error:&error];
     
     // Load Core Data
-    NSLog(@"Saving to Core Data");
-    NSManagedObjectContext *context = [self.fetchedResultsController managedObjectContext];
+    NSLog(@"Saving to Core Data");   
+    __block NSManagedObjectContext *managedObjectContext = [(AppDelegate *)[[UIApplication sharedApplication] delegate] managedObjectContext];
+    __block NSManagedObjectContext *writerObjectContext = [(AppDelegate *)[[UIApplication sharedApplication] delegate] writerManagedObjectContext];
+    __block NSManagedObjectContext *temporaryContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+    temporaryContext.parentContext = managedObjectContext;
     NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
     
-    for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
-        
-        NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:context];
-        [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
-        [newManagedObject setValue:[contact valueForKey:@"email"] forKey:@"email"];
-        [newManagedObject setValue:[contact valueForKey:@"phone"] forKey:@"phone"];
-        [newManagedObject setValue:[contact valueForKey:@"address"] forKey:@"address"];
-        [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
-        [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
-        
-        // Save the context.
-        NSError *error = nil;
-        if (![context save:&error]) {
-            // Replace this implementation with code to handle the error appropriately.
-            // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-            abort();
+    
+    [temporaryContext performBlock:^{
+
+        for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
+            
+            NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:temporaryContext];
+            [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
+            [newManagedObject setValue:[contact valueForKey:@"email"] forKey:@"email"];
+            [newManagedObject setValue:[contact valueForKey:@"phone"] forKey:@"phone"];
+            [newManagedObject setValue:[contact valueForKey:@"address"] forKey:@"address"];
+            [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
+            [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
+            
+            // Save the context.
+            NSError *error = nil;
+            if (![temporaryContext save:&error]) {
+                // Replace this implementation with code to handle the error appropriately.
+                // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+                abort();
+            }
         }
-    }
+        
+        [managedObjectContext performBlock:^{
+            // Save the context.
+            NSError *error = nil;
+            if (![managedObjectContext save:&error]) {
+                // Replace this implementation with code to handle the error appropriately.
+                // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+                abort();
+            }
+
+            [writerObjectContext performBlock:^{
+                // Save the context.
+                NSError *error = nil;
+                if (![writerObjectContext save:&error]) {
+                    // Replace this implementation with code to handle the error appropriately.
+                    // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                    NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+                    abort();
+                }
+                
+            }]; // writer
+        }]; // main
+    }]; // parent
+
 }
 
 #pragma mark - Table View
