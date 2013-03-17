@@ -66,7 +66,7 @@
         NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
         [context setPersistentStoreCoordinator:[(AppDelegate *)[[UIApplication sharedApplication] delegate] persistentStoreCoordinator]];
         NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
-               
+        
         for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
             NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:context];
             [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
@@ -87,12 +87,13 @@
             abort();
         }
         
+
     });
     
-    NSLog(@"Done with async");
 }
 
 - (void)contextDidSave:(NSNotification *)notification {
+    NSLog(@"Save Notification");
     NSManagedObjectContext *savedContext = [notification object];
     
     // ignore change notifications for the main MOC
