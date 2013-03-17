@@ -9,6 +9,7 @@
 #import "MasterViewController.h"
 
 #import "DetailViewController.h"
+#import "AppDelegate.h"
 
 @interface MasterViewController ()
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath;
@@ -30,6 +31,12 @@
     UIBarButtonItem *addButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(loadData)];
     self.navigationItem.rightBarButtonItem = addButton;
     
+    // Signup for MOC save notifications
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(contextDidSave:)
+                                                 name:NSManagedObjectContextDidSaveNotification
+                                               object:nil];
+    
     // SQLite path
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory , NSUserDomainMask, YES);
     NSString *documentsDir = [paths objectAtIndex:0];
@@ -45,37 +52,66 @@
 
 - (void)loadData
 {
-    // Load JSON
-    NSLog(@"Loading JSON");
-    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"randomdata5000" ofType:@"json"];
-    NSData *jsonData = [[NSData alloc] initWithContentsOfFile:filePath];
-    NSError *error = nil;
-    NSDictionary *contacts = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableContainers error:&error];
-    
-    // Load Core Data
-    NSLog(@"Saving to Core Data");
-    NSManagedObjectContext *context = [self.fetchedResultsController managedObjectContext];
-    NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
-    
-    for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
         
-        NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:context];
-        [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
-        [newManagedObject setValue:[contact valueForKey:@"email"] forKey:@"email"];
-        [newManagedObject setValue:[contact valueForKey:@"phone"] forKey:@"phone"];
-        [newManagedObject setValue:[contact valueForKey:@"address"] forKey:@"address"];
-        [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
-        [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
+        // Load JSON
+        NSLog(@"Loading JSON");
+        NSString *filePath = [[NSBundle mainBundle] pathForResource:@"randomdata5000" ofType:@"json"];
+        NSData *jsonData = [[NSData alloc] initWithContentsOfFile:filePath];
+        NSError *error = nil;
+        NSDictionary *contacts = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableContainers error:&error];
+        
+        // Load Core Data
+        NSLog(@"Saving to Core Data");
+        NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
+        [context setPersistentStoreCoordinator:[(AppDelegate *)[[UIApplication sharedApplication] delegate] persistentStoreCoordinator]];
+        NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
+               
+        for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
+            NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:context];
+            [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
+            [newManagedObject setValue:[contact valueForKey:@"email"] forKey:@"email"];
+            [newManagedObject setValue:[contact valueForKey:@"phone"] forKey:@"phone"];
+            [newManagedObject setValue:[contact valueForKey:@"address"] forKey:@"address"];
+            [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
+            [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
+            
+        }
         
         // Save the context.
-        NSError *error = nil;
+        error = nil;
         if (![context save:&error]) {
             // Replace this implementation with code to handle the error appropriately.
             // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
             abort();
         }
+        
+    });
+    
+    NSLog(@"Done with async");
+}
+
+- (void)contextDidSave:(NSNotification *)notification {
+    NSManagedObjectContext *savedContext = [notification object];
+    
+    // ignore change notifications for the main MOC
+    if (self.managedObjectContext == savedContext)
+    {
+        return;
     }
+    
+    if (self.managedObjectContext.persistentStoreCoordinator != savedContext.persistentStoreCoordinator)
+    {
+        // that's another database
+        return;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSLog(@"Save Notification");
+        NSManagedObjectContext *mainContext = [self.fetchedResultsController managedObjectContext];
+        [mainContext mergeChangesFromContextDidSaveNotification:notification];
+    });
 }
 
 #pragma mark - Table View
