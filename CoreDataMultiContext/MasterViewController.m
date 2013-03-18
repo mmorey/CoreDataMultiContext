@@ -47,20 +47,19 @@
 - (void)loadData
 {
     // Load JSON
-    NSLog(@"Loading JSON");
+    NSLog(@"Loading JSON from disk");
     NSString *filePath = [[NSBundle mainBundle] pathForResource:@"randomdata5000" ofType:@"json"];
     NSData *jsonData = [[NSData alloc] initWithContentsOfFile:filePath];
     NSError *error = nil;
     NSDictionary *contacts = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableContainers error:&error];
     
-    // Load Core Data
-    NSLog(@"Saving to Core Data");   
+    // Creating managed objects
+    NSLog(@"Creating managed objects");   
     __block NSManagedObjectContext *managedObjectContext = [(AppDelegate *)[[UIApplication sharedApplication] delegate] managedObjectContext];
     __block NSManagedObjectContext *writerObjectContext = [(AppDelegate *)[[UIApplication sharedApplication] delegate] writerManagedObjectContext];
     __block NSManagedObjectContext *temporaryContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
     temporaryContext.parentContext = managedObjectContext;
     NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
-    
     
     [temporaryContext performBlock:^{
 
@@ -73,12 +72,12 @@
             [newManagedObject setValue:[contact valueForKey:@"address"] forKey:@"address"];
             [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
             [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
-            
-
+        
         }
         
         // Save the context.
         NSError *error = nil;
+        NSLog(@"Saving to PSC");
         if (![temporaryContext save:&error]) {
             // Replace this implementation with code to handle the error appropriately.
             // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
