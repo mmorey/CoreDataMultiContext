@@ -74,14 +74,16 @@
             [newManagedObject setValue:[contact valueForKey:@"about"] forKey:@"about"];
             [newManagedObject setValue:[contact valueForKey:@"company"] forKey:@"company"];
             
-            // Save the context.
-            NSError *error = nil;
-            if (![temporaryContext save:&error]) {
-                // Replace this implementation with code to handle the error appropriately.
-                // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-                abort();
-            }
+
+        }
+        
+        // Save the context.
+        NSError *error = nil;
+        if (![temporaryContext save:&error]) {
+            // Replace this implementation with code to handle the error appropriately.
+            // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+            abort();
         }
         
         [managedObjectContext performBlock:^{
