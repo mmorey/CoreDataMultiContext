@@ -55,19 +55,20 @@
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
         
         // Load JSON
-        NSLog(@"Loading JSON");
+        NSLog(@"Loading JSON from disk");
         NSString *filePath = [[NSBundle mainBundle] pathForResource:@"randomdata5000" ofType:@"json"];
         NSData *jsonData = [[NSData alloc] initWithContentsOfFile:filePath];
         NSError *error = nil;
         NSDictionary *contacts = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableContainers error:&error];
         
-        // Load Core Data
-        NSLog(@"Saving to Core Data");
+        // Create managed objects
+        NSLog(@"Creating managed objects");
         NSManagedObjectContext *context = [[NSManagedObjectContext alloc] init];
         [context setPersistentStoreCoordinator:[(AppDelegate *)[[UIApplication sharedApplication] delegate] persistentStoreCoordinator]];
         NSEntityDescription *entity = [[self.fetchedResultsController fetchRequest] entity];
         
         for (NSDictionary *contact in [contacts valueForKey:@"result"]) {
+            
             NSManagedObject *newManagedObject = [NSEntityDescription insertNewObjectForEntityForName:[entity name] inManagedObjectContext:context];
             [newManagedObject setValue:[contact valueForKey:@"name"] forKey:@"name"];
             [newManagedObject setValue:[contact valueForKey:@"email"] forKey:@"email"];
@@ -79,6 +80,7 @@
         }
         
         // Save the context.
+        NSLog(@"Saving to PSC");
         error = nil;
         if (![context save:&error]) {
             // Replace this implementation with code to handle the error appropriately.
@@ -86,14 +88,12 @@
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
             abort();
         }
-        
 
     });
     
 }
 
 - (void)contextDidSave:(NSNotification *)notification {
-    NSLog(@"Save Notification");
     NSManagedObjectContext *savedContext = [notification object];
     
     // ignore change notifications for the main MOC
@@ -109,7 +109,7 @@
     }
     
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSLog(@"Save Notification");
+        NSLog(@"Saving main MOC");
         NSManagedObjectContext *mainContext = [self.fetchedResultsController managedObjectContext];
         [mainContext mergeChangesFromContextDidSaveNotification:notification];
     });
