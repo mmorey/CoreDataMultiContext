@@ -8,8 +8,9 @@ Core Data with multiple managed object contexts
 
 
 Branches  
+--------
 parent-context: Nested managed object context with async writer  
-notification-context: Multiple managed object context, legacy notification method  
+notification-context: Multiple managed objectcontext, legacy notification method  
 blocking: Single managed object context  
 
 
